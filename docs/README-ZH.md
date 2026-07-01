@@ -1,3 +1,56 @@
+# RustDesk 局域网增强版
+
+这个 fork 主要面向可信局域网内更清晰的远程桌面体验。
+
+- 新增 **局域网画质优化**，直连局域网会自动开启。用户可以在显示菜单中关闭，关闭后回到 RustDesk 原本的画质策略。
+- 局域网会突破原版内置 **最佳画质** 档位，发送自定义画质值 `1000`，服务端会映射到约 `20.0x` 码率，而原版 Best 档约为 `1.5x`；同时在支持时优先使用 **真彩模式（4:4:4）**，减少文字、图标和 UI 边缘的模糊与色彩损失。
+- 新增 **图像锐化**，支持关闭、低、中、高预设，也支持通过滑杆自定义锐化强度。锐化在控制端本地处理，不需要修改被控端画面源。
+- 在会话标题栏和显示质量监测中显示当前连接 IP/路径，方便判断当前是局域网直连还是中继连接。
+- Linux Sciter `.deb` 使用 `inline`、`hwcodec`、`unix-file-copy-paste` 构建，并在 deb 依赖中声明 Linux 文件复制粘贴需要的 FUSE 运行时组件。
+
+## 新增：双服务器回退（局域网 + 公网）
+
+当你同时拥有**局域网中继服务器**和**公网中继服务器**时，RustDesk 会自动尝试局域网中继，局域网查不到目标机器时回退到公网中继。
+
+### 配置方式
+
+**方式一：环境变量（适合临时测试）**
+
+```sh
+RUSTDESK_LAN_RENDEZVOUS_SERVER=192.168.40.70:21116 \
+RUSTDESK_LAN_RELAY_SERVER=192.168.40.70:21117 \
+RUSTDESK_LAN_SERVER_TIMEOUT_MS=3000 \
+./rustdesk
+```
+
+**方式二：配置文件**
+
+```toml
+# ~/.local/share/rustdesk/config/RustDesk.toml
+lan-rendezvous-server = "192.168.40.70:21116"
+lan-relay-server = "192.168.40.70:21117"
+lan-server-timeout-ms = 3000
+```
+
+**方式三：UI 设置页面**
+
+打开 设置 → ID/Relay Server，填入 LAN Rendezvous Server 和 LAN Relay Server 字段。
+
+### 工作原理
+
+1. 连接时先尝试 TCP 连接局域网中继服务器
+2. 如果局域网中继可达，向其查询目标机器
+3. 局域网查不到目标 → 自动回退到公网中继重新查询
+4. 打洞成功 → P2P 直连；打洞失败 → 走相应的中继服务器转发
+
+这个 fork 推荐的 Linux 安装包构建命令：
+
+```sh
+python3 build.py --hwcodec --unix-file-copy-paste
+```
+
+下面是官方原版README。
+
 <p align="center">
   <img src="../res/logo-header.svg" alt="RustDesk - Your remote desktop"><br>
   <a href="#免费的公共服务器">服务器</a> •

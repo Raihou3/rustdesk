@@ -142,8 +142,13 @@ const String kOptionLockAfterSessionEnd = "lock_after_session_end";
 const String kOptionPrivacyMode = "privacy_mode";
 const String kOptionTouchMode = "touch-mode";
 const String kOptionI444 = "i444";
+const String kOptionImageSharpening = "image-sharpening";
 const String kOptionSwapLeftRightMouse = "swap-left-right-mouse";
 const String kOptionCodecPreference = "codec-preference";
+
+const double kMinImageSharpening = 0;
+const double kMaxImageSharpening = 100;
+const double kDefaultImageSharpening = 0;
 const String kOptionRemoteMenubarDragLeft = "remote-menubar-drag-left";
 const String kOptionRemoteMenubarDragRight = "remote-menubar-drag-right";
 const String kOptionRemoteMenubarEdge = "remote-menubar-edge";
@@ -174,8 +179,6 @@ const String kOptionShowVirtualMouse = "show-virtual-mouse";
 const String kOptionVirtualMouseScale = "virtual-mouse-scale";
 const String kOptionShowVirtualJoystick = "show-virtual-joystick";
 const String kOptionAllowAskForNoteAtEndOfConnection = "allow-ask-for-note";
-const String kOptionAllowMonitorSwitchMainToolbar = "allow-monitor-switch-main-toolbar";
-const String kOptionAllowMonitorSwitchMinToolbar = "allow-monitor-switch-min-toolbar";
 const String kOptionEnableShowTerminalExtraKeys = "enable-show-terminal-extra-keys";
 
 // network options

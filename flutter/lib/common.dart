@@ -381,7 +381,7 @@ class MyTheme {
     appBarTheme: AppBarTheme(
       shadowColor: Colors.transparent,
     ),
-    dialogTheme: DialogTheme(
+    dialogTheme: DialogThemeData(
       elevation: 15,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18.0),
@@ -412,7 +412,7 @@ class MyTheme {
     cardColor: grayBg,
     hintColor: Color(0xFFAAAAAA),
     visualDensity: VisualDensity.adaptivePlatformDensity,
-    tabBarTheme: const TabBarTheme(
+    tabBarTheme: const TabBarThemeData(
       labelColor: Colors.black87,
     ),
     tooltipTheme: tooltipTheme(),
@@ -479,7 +479,7 @@ class MyTheme {
     appBarTheme: AppBarTheme(
       shadowColor: Colors.transparent,
     ),
-    dialogTheme: DialogTheme(
+    dialogTheme: DialogThemeData(
       elevation: 15,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18.0),
@@ -513,7 +513,7 @@ class MyTheme {
     ),
     cardColor: Color(0xFF24252B),
     visualDensity: VisualDensity.adaptivePlatformDensity,
-    tabBarTheme: const TabBarTheme(
+    tabBarTheme: const TabBarThemeData(
       labelColor: Colors.white70,
     ),
     tooltipTheme: tooltipTheme(),
@@ -596,6 +596,22 @@ class MyTheme {
       // Synchronize the window theme of the system.
       updateSystemWindowTheme();
     }
+  }
+
+  /// Applies [fallbacks] as fontFamilyFallback to every text style in both
+  /// themes. Called once at startup on ARM64 Linux after a CJK font has been
+  /// loaded via FontLoader (see flutter/flutter#139293).
+  static void applyFontFallback(List<String> fallbacks) {
+    lightTheme = lightTheme.copyWith(
+      textTheme: lightTheme.textTheme.apply(fontFamilyFallback: fallbacks),
+      primaryTextTheme:
+          lightTheme.primaryTextTheme.apply(fontFamilyFallback: fallbacks),
+    );
+    darkTheme = darkTheme.copyWith(
+      textTheme: darkTheme.textTheme.apply(fontFamilyFallback: fallbacks),
+      primaryTextTheme:
+          darkTheme.primaryTextTheme.apply(fontFamilyFallback: fallbacks),
+    );
   }
 
   static ThemeMode currentThemeMode() {
@@ -2896,13 +2912,23 @@ class ServerConfig {
   late String relayServer;
   late String apiServer;
   late String key;
+  late String lanRendezvousServer;
+  late String lanRelayServer;
 
-  ServerConfig(
-      {String? idServer, String? relayServer, String? apiServer, String? key}) {
+  ServerConfig({
+    String? idServer,
+    String? relayServer,
+    String? apiServer,
+    String? key,
+    String? lanRendezvousServer,
+    String? lanRelayServer,
+  }) {
     this.idServer = idServer?.trim() ?? '';
     this.relayServer = relayServer?.trim() ?? '';
     this.apiServer = apiServer?.trim() ?? '';
     this.key = key?.trim() ?? '';
+    this.lanRendezvousServer = lanRendezvousServer?.trim() ?? '';
+    this.lanRelayServer = lanRelayServer?.trim() ?? '';
   }
 
   /// decode from shared string (from user shared or rustdesk-server generated)
@@ -2943,7 +2969,9 @@ class ServerConfig {
       : idServer = options['custom-rendezvous-server'] ?? "",
         relayServer = options['relay-server'] ?? "",
         apiServer = options['api-server'] ?? "",
-        key = options['key'] ?? "";
+        key = options['key'] ?? "",
+        lanRendezvousServer = options['lan-rendezvous-server'] ?? "",
+        lanRelayServer = options['lan-relay-server'] ?? "";
 }
 
 Widget dialogButton(String text,
@@ -3516,6 +3544,11 @@ importConfig(List<TextEditingController>? controllers, List<RxString>? errMsgs,
       if (isWeb || isIOS) {
         sc.relayServer = '';
       }
+      // Preserve LAN settings — not stored in shared config
+      if (controllers != null && controllers.length > 5) {
+        sc.lanRendezvousServer = controllers[4].text.trim();
+        sc.lanRelayServer = controllers[5].text.trim();
+      }
       if (sc.idServer.isNotEmpty) {
         Future<bool> success = setServerConfig(controllers, errMsgs, sc);
         success.then((value) {
@@ -3558,6 +3591,12 @@ Future<bool> setServerConfig(
     controllers[1].text = config.relayServer;
     controllers[2].text = config.apiServer;
     controllers[3].text = config.key;
+    if (controllers.length > 4) {
+      controllers[4].text = config.lanRendezvousServer;
+    }
+    if (controllers.length > 5) {
+      controllers[5].text = config.lanRelayServer;
+    }
   }
   // id
   if (config.idServer.isNotEmpty && errMsgs != null) {
@@ -3592,6 +3631,10 @@ Future<bool> setServerConfig(
   await bind.mainSetOption(key: 'relay-server', value: config.relayServer);
   await bind.mainSetOption(key: 'api-server', value: config.apiServer);
   await bind.mainSetOption(key: 'key', value: config.key);
+  await bind.mainSetOption(
+      key: 'lan-rendezvous-server', value: config.lanRendezvousServer);
+  await bind.mainSetOption(
+      key: 'lan-relay-server', value: config.lanRelayServer);
   final newApiServer = await bind.mainGetApiServer();
   if (oldApiServer.isNotEmpty &&
       oldApiServer != newApiServer &&

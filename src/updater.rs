@@ -136,17 +136,10 @@ fn check_update(manually: bool) -> ResultType<()> {
         let version = download_url.split('/').last().unwrap_or_default();
         #[cfg(target_os = "windows")]
         let download_url = if cfg!(feature = "flutter") {
-            let Some(arch) = crate::platform::windows::release_arch_suffix() else {
-                bail!(
-                    "Unsupported Windows release architecture: {}",
-                    std::env::consts::ARCH
-                );
-            };
             format!(
-                "{}/rustdesk-{}-{}.{}",
+                "{}/rustdesk-{}-x86_64.{}",
                 download_url,
                 version,
-                arch,
                 if update_msi { "msi" } else { "exe" }
             )
         } else {

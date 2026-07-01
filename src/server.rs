@@ -82,6 +82,11 @@ pub type Childs = Arc<Mutex<Vec<std::process::Child>>>;
 type ConnMap = HashMap<i32, ConnInner>;
 
 #[derive(Clone, Default)]
+pub struct ControlledContext {
+    pub conn_audit_ref: String,
+}
+
+#[derive(Clone, Default)]
 pub struct ConnectionMeta {
     pub control_permissions: Option<ControlPermissions>,
     pub controlled_context: Option<ControlledContext>,

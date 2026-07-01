@@ -61,6 +61,27 @@
 * Do not make formatting-only changes.
 * Keep naming/style consistent with nearby code.
 
+## Dual-Server (LAN + Public) Fallback
+
+Implemented in `src/dual_server.rs`. When configured with a LAN rendezvous/relay server,
+the client tries LAN first and falls back to public if the target peer isn't found on LAN.
+
+### Config keys
+- `lan-rendezvous-server` — LAN ID server address (`host:port`)
+- `lan-relay-server` — LAN relay server address (`host:port`)
+- `lan-server-timeout-ms` — connection timeout for LAN attempts (default `3000`)
+
+### Environment variable fallback
+- `RUSTDESK_LAN_RENDEZVOUS_SERVER`
+- `RUSTDESK_LAN_RELAY_SERVER`
+- `RUSTDESK_LAN_SERVER_TIMEOUT_MS`
+
+### Key files
+- `src/dual_server.rs` — config loading, `resolve_rendezvous`, `resolve_relay`
+- `src/client.rs:364-462` — parallel `_start_inner` with LAN + public fallback via `select_ok`
+- `flutter/lib/common.dart` — `ServerConfig` with `lanRendezvousServer` / `lanRelayServer`
+- `flutter/lib/mobile/widgets/dialog.dart:77-80,186-194` — UI input fields
+
 ## Localization (`src/lang/*.rs`)
 
 Each file is a `HashMap<key, translation>`. Layout:

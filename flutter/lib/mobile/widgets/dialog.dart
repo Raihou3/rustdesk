@@ -74,12 +74,16 @@ void showServerSettingsWithValue(
   final relayCtrl = TextEditingController(text: serverConfig.relayServer);
   final apiCtrl = TextEditingController(text: serverConfig.apiServer);
   final keyCtrl = TextEditingController(text: serverConfig.key);
+  final lanRvCtrl =
+      TextEditingController(text: serverConfig.lanRendezvousServer);
+  final lanRelayCtrl =
+      TextEditingController(text: serverConfig.lanRelayServer);
 
   RxString idServerMsg = ''.obs;
   RxString relayServerMsg = ''.obs;
   RxString apiServerMsg = ''.obs;
 
-  final controllers = [idCtrl, relayCtrl, apiCtrl, keyCtrl];
+  final controllers = [idCtrl, relayCtrl, apiCtrl, keyCtrl, lanRvCtrl, lanRelayCtrl];
   final errMsgs = [
     idServerMsg,
     relayServerMsg,
@@ -98,7 +102,9 @@ void showServerSettingsWithValue(
               idServer: idCtrl.text.trim(),
               relayServer: relayCtrl.text.trim(),
               apiServer: apiCtrl.text.trim(),
-              key: keyCtrl.text.trim()));
+              key: keyCtrl.text.trim(),
+              lanRendezvousServer: lanRvCtrl.text.trim(),
+              lanRelayServer: lanRelayCtrl.text.trim()));
       setState(() {
         isInProgress = false;
       });
@@ -177,6 +183,15 @@ void showServerSettingsWithValue(
                   ),
                   SizedBox(height: 8),
                   buildField('Key', keyCtrl, ''),
+                  SizedBox(height: 8),
+                  if (!isIOS && !isWeb) ...[
+                    buildField(
+                        translate('LAN Rendezvous Server'), lanRvCtrl, ''),
+                    SizedBox(height: 8),
+                    buildField(
+                        translate('LAN Relay Server'), lanRelayCtrl, ''),
+                    SizedBox(height: 8),
+                  ],
                   if (isInProgress)
                     Padding(
                       padding: EdgeInsets.only(top: 8),
