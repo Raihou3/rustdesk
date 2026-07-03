@@ -11,12 +11,24 @@ fn link_pkg_config(name: &str) -> Vec<PathBuf> {
         "libvpx" => "vpx",
         _ => name,
     };
-    let lib = pkg_config::probe_library(pc_name)
-        .expect(format!(
-            "unable to find '{pc_name}' development headers with pkg-config (feature linux-pkg-config is enabled).
-            try installing '{pc_name}-dev' from your system package manager.").as_str());
-
-    lib.include_paths
+    if let Ok(lib) = pkg_config::probe_library(pc_name) {
+        return lib.include_paths;
+    }
+    // Some packages (e.g. libyuv) don't ship a .pc file.
+    // Emit link directives and assume headers are under standard paths.
+    println!("cargo:rustc-link-lib={}", name.strip_prefix("lib").unwrap_or(name));
+    for dir in &["/usr/include", "/usr/include/x86_64-linux-gnu"] {
+        let d = PathBuf::from(dir);
+        if d.join(format!("{}.h", name)).exists()
+            || d.join(format!("{}.h", name.strip_prefix("lib").unwrap_or(name))).exists()
+        {
+            return vec![d];
+        }
+    }
+    panic!(
+        "unable to find '{pc_name}' development headers with pkg-config (feature linux-pkg-config is enabled). \
+        try installing '{pc_name}-dev' from your system package manager."
+    );
 }
 #[cfg(not(all(target_os = "linux", feature = "linux-pkg-config")))]
 fn link_pkg_config(_name: &str) -> Vec<PathBuf> {
@@ -26,6 +38,7 @@ fn link_pkg_config(_name: &str) -> Vec<PathBuf> {
 /// Link vcpkg package.
 fn link_vcpkg(mut path: PathBuf, name: &str) -> PathBuf {
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
+    let target_env = std::env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
     let mut target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
     if target_arch == "x86_64" {
         target_arch = "x64".to_owned();
@@ -47,7 +60,11 @@ fn link_vcpkg(mut path: PathBuf, name: &str) -> PathBuf {
             format!("{}-{}", target_arch, target_os)
         }
     } else if target_os == "windows" {
-        format!("{}-windows-static", target_arch)
+        if target_env == "gnu" {
+            format!("{}-mingw-static", target_arch)
+        } else {
+            format!("{}-windows-static", target_arch)
+        }
     } else {
         format!("{}-{}", target_arch, target_os)
     };
@@ -254,14 +271,24 @@ fn main() {
         // nothing
     } else if target_os == "android" {
         println!("cargo:rustc-cfg=android");
-    } else if cfg!(windows) {
+    } else if target_os == "windows" {
+        println!("cargo:rustc-link-lib=windowscodecs");
+        let target_env = std::env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
+        if target_env == "msvc" {
+            let mingw_lib = Path::new("/usr/x86_64-w64-mingw32/lib");
+            if mingw_lib.exists() {
+                println!("cargo:rustc-link-search={}", mingw_lib.display());
+                println!("cargo:rustc-link-lib=static=winpthread");
+                println!("cargo:rustc-link-lib=static=pthread");
+            }
+        }
         // The first choice is Windows because DXGI is amazing.
         println!("cargo:rustc-cfg=dxgi");
-    } else if cfg!(target_os = "macos") {
+    } else if target_os == "macos" {
         // Quartz is second because macOS is the (annoying) exception.
         println!("cargo:rustc-cfg=quartz");
-    } else if cfg!(unix) {
-        // On UNIX we pray that X11 (with XCB) is available.
+    } else if target_os == "linux" {
+        // On Linux we pray that X11 (with XCB) is available.
         println!("cargo:rustc-cfg=x11");
     }
 }

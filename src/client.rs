@@ -367,11 +367,13 @@ impl Client {
         let public_rendezvous_server = rendezvous_server.clone();
         let public_servers = servers.clone();
 
-        // Try LAN rendezvous server first (if configured)
+        // Try LAN rendezvous server first (if configured and different from the current server)
         let _connected_via_lan;
         let (rendezvous_server, servers) = {
             let dual = DualServerConfig::from_config();
-            if dual.has_lan_rendezvous() {
+            if dual.has_lan_rendezvous()
+                && dual.lan_rendezvous().as_ref() != Some(&rendezvous_server)
+            {
                 let (rv, sv, lan) =
                     dual_server::resolve_rendezvous(&dual, &rendezvous_server, servers).await;
                 _connected_via_lan = lan;
@@ -407,6 +409,12 @@ impl Client {
             (None, None)
         };
         let mut connect_futures: Vec<Pin<Box<dyn Future<Output = _> + Send>>> = Vec::new();
+        // Save LCH before interface moves into connect_futures
+        let lch = if _connected_via_lan {
+            Some(interface.get_lch())
+        } else {
+            None
+        };
         connect_futures.push(
             Self::_start_inner(
                 peer.to_owned(),
@@ -458,7 +466,18 @@ impl Client {
             );
         };
         match select_ok(connect_futures).await {
-            Ok(conn) => Ok((conn.0 .0, conn.0 .1, conn.0 .2)),
+            Ok(conn) => {
+                // Show LAN relay in quality monitor for direct (non-relay) connections
+                if let Some(lch) = lch {
+                    if conn.0 .0 .4 != "Relay" {
+                        let dual = DualServerConfig::from_config();
+                        if let Some(lan_relay) = dual.lan_relay() {
+                            lch.write().unwrap().relay_server = Some(lan_relay);
+                        }
+                    }
+                }
+                Ok((conn.0 .0, conn.0 .1, conn.0 .2))
+            }
             Err(e) => Err(e),
         }
     }
@@ -722,6 +741,13 @@ impl Client {
         drop(socket);
         if peer_addr.port() == 0 {
             bail!("Failed to connect via rendezvous server");
+        }
+        // Store connection info for quality monitor display
+        {
+            let lch = interface.get_lch();
+            let mut lc = lch.write().unwrap();
+            lc.peer_addr = Some(peer_addr.to_string());
+            lc.relay_server = Some(relay_server.clone());
         }
         let time_used = start.elapsed().as_millis() as u64;
         log::info!(
@@ -1907,6 +1933,8 @@ pub struct LoginConfigHandler {
     pub enable_trusted_devices: bool,
     pub record_state: bool,
     pub record_permission: bool,
+    pub peer_addr: Option<String>,
+    pub relay_server: Option<String>,
 }
 
 impl Deref for LoginConfigHandler {

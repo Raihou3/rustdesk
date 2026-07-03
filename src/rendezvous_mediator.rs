@@ -151,6 +151,7 @@ impl RendezvousMediator {
         scrap::codec::test_av1();
         *LAST_NOT_DEPLOYED_REGISTER.lock().await = None;
         loop {
+            log::info!("connection cycle start, servers: {:?}", Config::get_rendezvous_servers());
             let timeout = Arc::new(RwLock::new(CONNECT_TIMEOUT));
             let conn_start_time = Instant::now();
             *SOLVING_PK_MISMATCH.lock().await = "".to_owned();
@@ -158,7 +159,16 @@ impl RendezvousMediator {
                 && !crate::platform::installing_service()
             {
                 let mut futs = Vec::new();
-                let servers = Config::get_rendezvous_servers();
+                let mut servers = Config::get_rendezvous_servers();
+                {
+                    use crate::dual_server::DualServerConfig;
+                    let dual = DualServerConfig::from_config();
+                    if let Some(lan) = dual.lan_rendezvous() {
+                        if !servers.iter().any(|s| s == &lan) {
+                            servers.push(lan);
+                        }
+                    }
+                }
                 SHOULD_EXIT.store(false, Ordering::SeqCst);
                 MANUAL_RESTARTED.store(false, Ordering::SeqCst);
                 for host in servers.clone() {
@@ -184,6 +194,7 @@ impl RendezvousMediator {
             } else {
                 server.write().unwrap().close_connections();
             }
+            log::info!("connection cycle ended, resetting online status");
             Config::reset_online();
             let timeout = *timeout.read().unwrap();
             if !MANUAL_RESTARTED.load(Ordering::SeqCst) {
@@ -215,6 +226,7 @@ impl RendezvousMediator {
         let host = check_port(&host, RENDEZVOUS_PORT);
         log::info!("start udp: {host}");
         let (mut socket, mut addr) = new_udp_for(&host, CONNECT_TIMEOUT).await?;
+        log::info!("udp socket bound, target addr: {:?}", addr);
         let mut rz = Self {
             addr: addr.clone(),
             host: host.clone(),
@@ -322,12 +334,14 @@ impl RendezvousMediator {
                                 old_latency = 0;
                             }
                         }
+                        log::info!("register_peer to {} (fails={})", rz.host, fails);
                         rz.register_peer(Sink::Framed(&mut socket, &addr)).await?;
                         last_register_sent = now;
                     }
                 }
             }
         }
+        log::info!("udp connection to {} ended", host);
         Ok(())
     }
 
@@ -342,8 +356,8 @@ impl RendezvousMediator {
         match msg {
             Some(rendezvous_message::Union::RegisterPeerResponse(rpr)) => {
                 update_latency();
+                log::info!("RegisterPeerResponse from {} (request_pk={})", self.host, rpr.request_pk);
                 if rpr.request_pk {
-                    log::info!("request_pk received from {}", self.host);
                     self.register_pk(sink).await?;
                 }
             }
@@ -351,6 +365,7 @@ impl RendezvousMediator {
                 update_latency();
                 match rpr.result.enum_value() {
                     Ok(register_pk_response::Result::OK) => {
+                        log::info!("RegisterPkResponse::OK from {}", self.host);
                         Config::set_key_confirmed(true);
                         Config::set_host_key_confirmed(&self.host_prefix, true);
                         *SOLVING_PK_MISMATCH.lock().await = "".to_owned();
@@ -424,8 +439,10 @@ impl RendezvousMediator {
         let host = check_port(&host, RENDEZVOUS_PORT);
         log::info!("start tcp: {}", hbb_common::websocket::check_ws(&host));
         let mut conn = connect_tcp(host.clone(), CONNECT_TIMEOUT).await?;
+        log::info!("tcp connected to {}", host);
         let key = crate::get_key(true).await;
         crate::secure_tcp(&mut conn, &key).await?;
+        log::info!("tcp secured for {}", host);
         let mut rz = Self {
             addr: conn.local_addr().into_target_addr()?,
             host: host.clone(),
@@ -475,6 +492,7 @@ impl RendezvousMediator {
                 }
             }
         }
+        log::info!("tcp connection to {} ended", host);
         Ok(())
     }
 
@@ -806,7 +824,7 @@ impl RendezvousMediator {
             return self.register_pk(socket).await;
         }
         let id = Config::get_id();
-        log::trace!(
+        log::info!(
             "Register my id {:?} to rendezvous server {:?}",
             id,
             self.addr,

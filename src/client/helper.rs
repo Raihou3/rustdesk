@@ -13,6 +13,8 @@ pub struct QualityStatus {
     pub target_bitrate: Option<i32>,
     pub codec_format: Option<CodecFormat>,
     pub chroma: Option<String>,
+    pub peer_addr: Option<String>,
+    pub relay_server: Option<String>,
 }
 
 #[inline]

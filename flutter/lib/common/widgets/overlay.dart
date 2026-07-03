@@ -606,6 +606,12 @@ class QualityMonitor extends StatelessWidget {
                       _row(
                           "Codec", qualityMonitorModel.data.codecFormat ?? '-'),
                       _row("Chroma", qualityMonitorModel.data.chroma ?? '-'),
+                      if (qualityMonitorModel.data.peerAddr != null)
+                        _row("Peer",
+                            qualityMonitorModel.data.peerAddr ?? '-'),
+                      if (qualityMonitorModel.data.relayServer != null)
+                        _row("Relay",
+                            qualityMonitorModel.data.relayServer ?? '-'),
                     ],
                   ),
                 )

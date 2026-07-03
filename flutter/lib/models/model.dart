@@ -3508,6 +3508,8 @@ class QualityMonitorData {
   String? targetBitrate;
   String? codecFormat;
   String? chroma;
+  String? peerAddr;
+  String? relayServer;
 }
 
 class QualityMonitorModel with ChangeNotifier {
@@ -3569,6 +3571,14 @@ class QualityMonitorModel with ChangeNotifier {
       }
       if (evt.containsKey('chroma') && (evt['chroma'] as String).isNotEmpty) {
         _data.chroma = evt['chroma'];
+      }
+      if (evt.containsKey('peer_addr') &&
+          (evt['peer_addr'] as String).isNotEmpty) {
+        _data.peerAddr = evt['peer_addr'];
+      }
+      if (evt.containsKey('relay_server') &&
+          (evt['relay_server'] as String).isNotEmpty) {
+        _data.relayServer = evt['relay_server'];
       }
       notifyListeners();
     } catch (e) {

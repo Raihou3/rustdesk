@@ -51,7 +51,7 @@ lan-server-timeout-ms = 3000
 Ubuntu 26 推荐的打包命令：
 
 ```sh
-VCPKG_ROOT="./vcpkg" CXXFLAGS="-include cstdint" VULKAN_SDK=/usr RUSTFLAGS="-lswresample" python3 build.py --flutter --hwcodec
+VCPKG_ROOT="/vcpkg" CXXFLAGS="-include cstdint" VULKAN_SDK=/usr RUSTFLAGS="-lswresample" python3 build.py --flutter --hwcodec
 ```
 
 完整中文说明见 [docs/README-ZH.md](docs/README-ZH.md)。

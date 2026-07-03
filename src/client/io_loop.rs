@@ -318,11 +318,17 @@ impl<T: InvokeUiSession> Remote<T> {
                             } else {
                                 Some(self.video_format.clone())
                             };
+                            let (peer_addr, relay_server) = {
+                                let lc = self.handler.lc.read().unwrap();
+                                (lc.peer_addr.clone(), lc.relay_server.clone())
+                            };
                             self.handler.update_quality_status(QualityStatus {
                                 speed: Some(speed),
                                 fps,
                                 chroma,
                                 codec_format,
+                                peer_addr,
+                                relay_server,
                                 ..Default::default()
                             });
                         }
